@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patrimônio FII · Gestão de Estoque Imobiliário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --paper:#F6F5F1; --card:#FFFFFF; --ink:#19231F; --ink-2:#54625B; --line:#E2E0D8;
+  --green:#155446; --green-soft:#E3EEE9; --gold:#B9892F; --gold-soft:#F6EEDB;
+  --red:#B3402E; --red-soft:#F7E4E0; --blue:#2D5C8A; --blue-soft:#E3ECF5;
+  --side:#10211B; --side-ink:#C9D6CF;
+  --r:10px; --shadow:0 1px 2px rgba(25,35,31,.06), 0 4px 14px rgba(25,35,31,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;display:flex}
+h1,h2,h3,.brand{font-family:'Archivo',sans-serif}
+.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+
+aside{width:228px;min-height:100vh;background:var(--side);color:var(--side-ink);padding:22px 14px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;position:sticky;top:0;height:100vh}
+.brand{color:#fff;font-weight:800;font-size:17px;letter-spacing:.3px;padding:0 10px 6px}
+.brand small{display:block;font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:#7E978C;letter-spacing:1.6px;text-transform:uppercase;margin-top:3px}
+.navsec{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#5F7A6E;padding:16px 10px 6px}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;color:var(--side-ink);font:inherit;font-weight:500;padding:9px 10px;border-radius:8px;cursor:pointer}
+.nav-btn:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-btn.active{background:var(--green);color:#fff}
+.nav-btn svg{width:16px;height:16px;flex-shrink:0}
+.side-foot{margin-top:auto;font-size:11px;color:#5F7A6E;padding:10px;border-top:1px solid rgba(255,255,255,.08)}
+.sync{display:flex;align-items:center;gap:7px;font-size:11px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.05);margin-top:10px}
+.sync .dot{width:8px;height:8px;border-radius:99px;background:#9AA6A0;flex-shrink:0}
+.sync.on .dot{background:#4CC38A}
+.sync.err .dot{background:#E5484D}
+
+main{flex:1;min-width:0;padding:26px 30px 60px;max-width:1340px}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.topbar h1{font-size:22px;font-weight:700}
+.topbar .sub{color:var(--ink-2);margin-top:3px;font-size:13px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+select,input,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+.btn{font:inherit;font-weight:600;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.primary:hover{background:#0F4338;color:#fff}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn[disabled]{opacity:.5;cursor:wait}
+
+.banner{background:var(--gold-soft);border:1px solid #E4D2A4;color:#6E5217;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.banner.show{display:block}
+
+.view{display:none}.view.active{display:block}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(178px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.kpi .lbl{font-size:11px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-2)}
+.kpi .val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;margin-top:6px}
+.kpi .delta{font-size:12px;margin-top:4px;color:var(--ink-2)}
+.card h3{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.card h3 .hint{font-weight:400;font-size:11px;color:var(--ink-2)}
+.charts2{grid-template-columns:1.4fr 1fr}
+.charts3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:1100px){.charts2,.charts3{grid-template-columns:1fr}}
+.chartbox{position:relative;height:250px}
+
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:980px}
+th{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-2);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:#FBFAF7;position:sticky;top:0;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #F0EEE7;white-space:nowrap;vertical-align:middle}
+tr:hover td{background:#FAF9F4}
+td.mono,th.r{font-family:'IBM Plex Mono',monospace}
+td.r,th.r{text-align:right}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px}
+.b-disp{background:var(--green-soft);color:var(--green)}
+.b-res{background:var(--gold-soft);color:#8A6418}
+.b-neg{background:var(--blue-soft);color:var(--blue)}
+.b-vend{background:#19231F;color:#fff}
+.b-dist{background:var(--red-soft);color:var(--red)}
+.b-bloq{background:#ECEAE3;color:var(--ink-2)}
+.link{background:none;border:0;color:var(--green);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;padding:0}
+
+.kanban{display:grid;grid-template-columns:repeat(6,minmax(190px,1fr));gap:12px;overflow-x:auto;align-items:start}
+.kcol{background:#EFEDE6;border:1px solid var(--line);border-radius:var(--r);padding:10px;min-height:140px}
+.kcol h4{font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-2);display:flex;justify-content:space-between;margin-bottom:10px}
+.kcol h4 .cnt{font-family:'IBM Plex Mono',monospace;background:#fff;border:1px solid var(--line);border-radius:6px;padding:0 6px}
+.kcard{background:#fff;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:8px;padding:10px;margin-bottom:8px;box-shadow:var(--shadow);font-size:12.5px}
+.kcard .t{font-weight:600;font-size:13px}
+.kcard .m{color:var(--ink-2);margin-top:2px}
+.kcard .v{font-family:'IBM Plex Mono',monospace;font-weight:600;margin-top:6px}
+.kcard .acts{display:flex;gap:6px;margin-top:8px}
+
+dialog{border:0;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.3);width:min(880px,94vw);padding:0}
+dialog::backdrop{background:rgba(16,33,27,.55)}
+.mhead{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line)}
+.mhead h2{font-size:17px}
+.mbody{padding:20px 22px;max-height:70vh;overflow:auto}
+.mfoot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.fgrid{grid-template-columns:1fr}}
+.field label{display:block;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-2);margin-bottom:5px}
+.field input,.field select{width:100%}
+fieldset{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px}
+legend{font-family:'Archivo';font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--green);padding:0 6px}
+@media(max-width:900px){aside{display:none}main{padding:18px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand">Patrimônio FII<small>Asset Management</small></div>
+  <div class="navsec">Operação</div>
+  <button class="nav-btn active" data-view="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard Executivo</button>
+  <button class="nav-btn" data-view="estoque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>Estoque de Imóveis</button>
+  <button class="nav-btn" data-view="pipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16l-6 8v6l-4 2v-8z"/></svg>Pipeline Comercial</button>
+  <div class="sync" id="sync"><span class="dot"></span><span id="sync-txt">Modo local (sem banco)</span></div>
+  <div class="side-foot">v1.0 · multiusuário<br>GitHub Pages / Cloudflare + Supabase</div>
+</aside>
+
+<main>
+<div class="banner" id="banner"></div>
+
+<!-- ============ DASHBOARD ============ -->
+<section class="view active" id="view-dash">
+  <div class="topbar">
+    <div><h1>Dashboard Executivo</h1><div class="sub">Visão consolidada do portfólio · <span id="dash-date"></span></div></div>
+    <div class="toolbar"><select id="f-fundo-dash"></select></div>
+  </div>
+  <div class="grid kpis" id="kpi-estoque"></div>
+  <div style="height:14px"></div>
+  <div class="grid kpis" id="kpi-fin"></div>
+  <div style="height:14px"></div>
+  <div class="grid charts2">
+    <div class="card"><h3>Receita realizada × projetada <span class="hint">últimos 12 meses, R$ mil</span></h3><div class="chartbox"><canvas id="ch-receita"></canvas></div></div>
+    <div class="card"><h3>Estoque por status</h3><div class="chartbox"><canvas id="ch-status"></canvas></div></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="grid charts3">
+    <div class="card"><h3>Conversão de propostas <span class="hint">funil</span></h3><div class="chartbox"><canvas id="ch-funil"></canvas></div></div>
+    <div class="card"><h3>Ranking de empreendimentos <span class="hint">VGV vendido, R$ mil</span></h3><div class="chartbox"><canvas id="ch-emp"></canvas></div></div>
+    <div class="card"><h3>Ranking de corretores <span class="hint">vendas fechadas</span></h3><div class="chartbox"><canvas id="ch-corr"></canvas></div></div>
+  </div>
+  <div style="height:14px"></div>
+  <div class="grid kpis" id="kpi-com"></div>
+</section>
+
+<!-- ============ ESTOQUE ============ -->
+<section class="view" id="view-estoque">
+  <div class="topbar">
+    <div><h1>Estoque de Imóveis</h1><div class="sub">Cadastro manual, posição financeira e situação comercial por unidade</div></div>
+    <div class="toolbar">
+      <input id="f-busca" type="search" placeholder="Buscar imóvel, AP, empreendimento…">
+      <select id="f-status"><option value="">Status: todos</option></select>
+      <select id="f-emp"><option value="">Empreendimento: todos</option></select>
+      <button class="btn primary" id="btn-novo">+ Cadastrar imóvel</button>
+    </div>
+  </div>
+  <div class="tablewrap"><table id="tb-imoveis">
+    <thead><tr>
+      <th>Código</th><th>Imóvel</th><th>AP</th><th>Empreendimento</th><th>Status</th>
+      <th class="r">UN/Custo</th><th class="r">Proposta de Venda</th><th class="r">Vlr. Líquido Fundo</th>
+      <th class="r">Exced./Quota</th><th class="r">Excedente R$</th><th class="r">ROI</th><th>Desligamento</th><th></th>
+    </tr></thead><tbody></tbody>
+  </table></div>
+</section>
+
+<!-- ============ PIPELINE ============ -->
+<section class="view" id="view-pipeline">
+  <div class="topbar">
+    <div><h1>Pipeline Comercial</h1><div class="sub">Propostas por etapa — um imóvel pode ter múltiplas propostas ativas</div></div>
+    <div class="toolbar"><button class="btn primary" id="btn-nova-prop">+ Nova proposta</button></div>
+  </div>
+  <div class="kanban" id="kanban"></div>
+  <div style="height:18px"></div>
+  <div class="card"><h3>Controle de propostas <span class="hint">visão tabular</span></h3>
+    <div class="tablewrap" style="box-shadow:none;border:0"><table id="tb-prop">
+      <thead><tr><th>Imóvel</th><th>Cliente</th><th>Corretor</th><th>Data</th><th class="r">Valor ofertado</th><th>Pagamento</th><th class="r">Entrada</th><th class="r">Parcelas</th><th>Etapa</th><th></th></tr></thead>
+      <tbody></tbody></table></div>
+  </div>
+</section>
+</main>
+
+<!-- ============ MODAL IMÓVEL ============ -->
+<dialog id="dlg-imovel">
+  <form method="dialog" id="frm-imovel">
+    <div class="mhead"><h2 id="dlg-title">Cadastrar imóvel</h2><button class="btn sm" value="cancel" type="submit" formnovalidate>Fechar ✕</button></div>
+    <div class="mbody">
+      <fieldset><legend>Identificação</legend><div class="fgrid">
+        <div class="field"><label>Código interno</label><input name="codigo" required placeholder="IMV-000"></div>
+        <div class="field"><label>Imóvel</label><input name="nome" required placeholder="Torre A — Unid. 1203"></div>
+        <div class="field"><label>AP (apartamento)</label><input name="ap" placeholder="1203"></div>
+        <div class="field"><label>Empreendimento</label><input name="empreendimento" list="dl-emps" required></div>
+        <div class="field"><label>Fundo</label><select name="fundoId" id="sel-fundo"></select></div>
+        <div class="field"><label>Tipo do imóvel</label><select name="tipo"><option>Apartamento</option><option>Sala comercial</option><option>Loja</option><option>Casa</option><option>Galpão</option><option>Terreno</option></select></div>
+      </div></fieldset>
+      <fieldset><legend>Localização e registro</legend><div class="fgrid">
+        <div class="field"><label>Endereço</label><input name="endereco"></div>
+        <div class="field"><label>Cidade</label><input name="cidade"></div>
+        <div class="field"><label>Estado (UF)</label><input name="uf" maxlength="2"></div>
+        <div class="field"><label>CEP</label><input name="cep"></div>
+        <div class="field"><label>Matrícula</label><input name="matricula"></div>
+        <div class="field"><label>Cartório</label><input name="cartorio"></div>
+        <div class="field"><label>Área privativa (m²)</label><input name="areaPriv" type="number" step="0.01"></div>
+        <div class="field"><label>Área total (m²)</label><input name="areaTotal" type="number" step="0.01"></div>
+        <div class="field"><label>Nº de vagas</label><input name="vagas" type="number" min="0"></div>
+      </div></fieldset>
+      <fieldset><legend>Aquisição e financeiro</legend><div class="fgrid">
+        <div class="field"><label>Data de aquisição</label><input name="dataAquisicao" type="date"></div>
+        <div class="field"><label>Valor de aquisição (R$)</label><input name="valorAquisicao" type="number" step="0.01"></div>
+        <div class="field"><label>UN/Custo (R$)</label><input name="unCusto" type="number" step="0.01"></div>
+        <div class="field"><label>Valor contábil (R$)</label><input name="valorContabil" type="number" step="0.01"></div>
+        <div class="field"><label>Valor de mercado (R$)</label><input name="valorMercado" type="number" step="0.01"></div>
+        <div class="field"><label>Proposta de venda (R$)</label><input name="propostaVenda" type="number" step="0.01"></div>
+        <div class="field"><label>Parcela 1 (R$)</label><input name="parcela1" type="number" step="0.01"></div>
+        <div class="field"><label>Parcela 2 (R$)</label><input name="parcela2" type="number" step="0.01"></div>
+        <div class="field"><label>Custos acumulados (R$)</label><input name="custosAcum" type="number" step="0.01"></div>
+        <div class="field"><label>Valor líquido fundo (R$)</label><input name="valorLiquidoFundo" type="number" step="0.01"></div>
+        <div class="field"><label>Excedente por quota (R$)</label><input name="excedenteQuota" type="number" step="0.0001" placeholder="auto se vazio"></div>
+        <div class="field"><label>Excedente em R$</label><input name="excedenteRS" type="number" step="0.01" placeholder="auto se vazio"></div>
+        <div class="field"><label>Condomínio mensal (R$)</label><input name="condominio" type="number" step="0.01"></div>
+        <div class="field"><label>IPTU anual (R$)</label><input name="iptu" type="number" step="0.01"></div>
+        <div class="field"><label>Data de desligamento</label><input name="desligamento" type="date"></div>
+      </div></fieldset>
+      <fieldset><legend>Situação comercial</legend><div class="fgrid">
+        <div class="field"><label>Status da unidade</label><select name="status"><option>Disponível</option><option>Reservado</option><option>Em negociação</option><option>Vendido</option><option>Distratado</option><option>Bloqueado</option></select></div>
+        <div class="field"><label>Data de entrada em estoque</label><input name="dataEstoque" type="date"></div>
+      </div></fieldset>
+      <datalist id="dl-emps"></datalist>
+    </div>
+    <div class="mfoot"><button class="btn" value="cancel" type="submit" formnovalidate>Cancelar</button><button class="btn primary" value="save" type="submit">Salvar imóvel</button></div>
+  </form>
+</dialog>
+
+<!-- ============ MODAL PROPOSTA ============ -->
+<dialog id="dlg-prop">
+  <form method="dialog" id="frm-prop">
+    <div class="mhead"><h2>Nova proposta</h2><button class="btn sm" value="cancel" type="submit" formnovalidate>Fechar ✕</button></div>
+    <div class="mbody"><div class="fgrid">
+      <div class="field"><label>Imóvel</label><select name="imovelId" id="sel-imovel-prop" required></select></div>
+      <div class="field"><label>Cliente</label><input name="cliente" required></div>
+      <div class="field"><label>Corretor</label><input name="corretor" list="dl-corr" required></div>
+      <div class="field"><label>Data da proposta</label><input name="data" type="date" required></div>
+      <div class="field"><label>Valor ofertado (R$)</label><input name="valor" type="number" step="0.01" required></div>
+      <div class="field"><label>Forma de pagamento</label><select name="formaPgto"><option>À vista</option><option>Financiamento bancário</option><option>Parcelado direto</option><option>FGTS + financiamento</option><option>Permuta</option></select></div>
+      <div class="field"><label>Entrada (R$)</label><input name="entrada" type="number" step="0.01"></div>
+      <div class="field"><label>Nº de parcelas</label><input name="parcelas" type="number" min="0"></div>
+      <div class="field"><label>Etapa</label><select name="etapa"><option>Proposta recebida</option><option>Em análise</option><option>Aprovada</option><option>Contrato assinado</option><option>Vendida</option></select></div>
+    </div><datalist id="dl-corr"></datalist></div>
+    <div class="mfoot"><button class="btn" value="cancel" type="submit" formnovalidate>Cancelar</button><button class="btn primary" value="save" type="submit">Registrar proposta</button></div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+/* =====================================================================
+   CONFIGURAÇÃO DO SUPABASE
+   1. Crie o projeto no supabase.com e rode o script supabase-setup.sql
+   2. Cole abaixo a URL e a chave "anon public" (Settings → API)
+   3. Salve, faça o deploy — todos os analistas passam a ver os mesmos dados
+   Se deixar os placeholders, o sistema roda em MODO LOCAL (dados na memória).
+===================================================================== */
+const SUPABASE_URL      = "COLE_AQUI_A_URL";        // ex.: https://abcd1234.supabase.co
+const SUPABASE_ANON_KEY = "COLE_AQUI_A_CHAVE_ANON"; // ex.: eyJhbGciOiJIUzI1...
+
+const FUNDOS = [
+  {id:1, nome:"FII Horizonte Residencial", quotas:1200000},
+  {id:2, nome:"FII Vértice Urbano",        quotas:800000}
+];
+
+let IMOVEIS = [], PROPOSTAS = [];
+let sb = null, NUVEM = false;
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const fmtBR = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0});
+const money = v => v==null||v===""||isNaN(v) ? "—" : fmtBR.format(+v);
+const pct = v => isNaN(v)||!isFinite(v) ? "—" : (v*100).toFixed(1).replace(".",",")+"%";
+const fmtD = s => s ? String(s).slice(0,10).split("-").reverse().join("/") : "—";
+const hoje = new Date();
+const dIso = d => d.toISOString().slice(0,10);
+const imvById = id => IMOVEIS.find(i=>i.id===+id);
+const empreendimentos = () => [...new Set(IMOVEIS.map(i=>i.empreendimento).filter(Boolean))].sort();
+const corretores = () => [...new Set(PROPOSTAS.map(p=>p.corretor).filter(Boolean))].sort();
+const diasEstoque = i => i.dataEstoque ? Math.round((new Date(i.dataVenda||dIso(hoje)) - new Date(i.dataEstoque))/86400000) : 0;
+const roiImovel = i => {
+  const custo = (+i.unCusto||+i.valorAquisicao||0) + (+i.custosAcum||0);
+  const saida = i.status==="Vendido" ? (+i.valorLiquidoFundo||+i.propostaVenda) : (+i.valorLiquidoFundo||+i.valorMercado);
+  return custo ? (saida-custo)/custo : NaN;
+};
+const excedenteRS = i => i.excedenteRS!=null && i.excedenteRS!=="" ? +i.excedenteRS : (+i.valorLiquidoFundo||0)-(+i.valorContabil||0);
+const excedenteQuota = i => {
+  if(i.excedenteQuota!=null && i.excedenteQuota!=="") return +i.excedenteQuota;
+  const f = FUNDOS.find(f=>f.id===+i.fundoId);
+  return f ? excedenteRS(i)/f.quotas : 0;
+};
+const badgeCls = s => ({"Disponível":"b-disp","Reservado":"b-res","Em negociação":"b-neg","Vendido":"b-vend","Distratado":"b-dist","Bloqueado":"b-bloq"})[s]||"b-bloq";
+const ETAPAS = ["Proposta recebida","Em análise","Aprovada","Contrato assinado","Vendida"];
+const C = {green:"#155446", green2:"#4E8A78", gold:"#B9892F", red:"#B3402E", blue:"#2D5C8A", grey:"#9AA6A0", ink:"#19231F"};
+let localSeq = 1;
+
+function setSync(state, txt){
+  const el=$("#sync"); el.classList.remove("on","err");
+  if(state) el.classList.add(state);
+  $("#sync-txt").textContent = txt;
+}
+function showBanner(msg){ const b=$("#banner"); b.innerHTML=msg; b.classList.add("show"); }
+
+/* ================= CAMADA DE DADOS (Supabase ou memória) ================= */
+function rowToObj(r){ return Object.assign({id:r.id}, r.dados); }
+function objToRow(o){ const d=Object.assign({},o); delete d.id; return {dados:d}; }
+
+async function dbLoad(){
+  if(!NUVEM) return;
+  setSync("", "Sincronizando…");
+  const [a,b] = await Promise.all([
+    sb.from("imoveis").select("*").order("id"),
+    sb.from("propostas").select("*").order("id")
+  ]);
+  if(a.error||b.error){ setSync("err","Erro ao carregar — veja o console"); console.error(a.error||b.error); return; }
+  IMOVEIS = a.data.map(rowToObj);
+  PROPOSTAS = b.data.map(rowToObj);
+  setSync("on","Conectado · tempo real");
+  renderAll();
+}
+
+async function dbSaveImovel(rec){
+  if(!NUVEM){
+    if(rec.id){ Object.assign(imvById(rec.id), rec); } else { rec.id=localSeq++; IMOVEIS.push(rec); }
+    return rec;
+  }
+  if(rec.id){
+    const {error} = await sb.from("imoveis").update(objToRow(rec)).eq("id", rec.id);
+    if(error) throw error;
+    Object.assign(imvById(rec.id)||{}, rec);
+  } else {
+    const {data,error} = await sb.from("imoveis").insert(objToRow(rec)).select().single();
+    if(error) throw error;
+    rec.id=data.id; IMOVEIS.push(rec);
+  }
+  return rec;
+}
+
+async function dbSaveProposta(rec){
+  if(!NUVEM){
+    if(rec.id){ Object.assign(PROPOSTAS.find(p=>p.id===rec.id), rec); } else { rec.id=localSeq++; PROPOSTAS.push(rec); }
+    return rec;
+  }
+  if(rec.id){
+    const {error} = await sb.from("propostas").update(objToRow(rec)).eq("id", rec.id);
+    if(error) throw error;
+  } else {
+    const {data,error} = await sb.from("propostas").insert(objToRow(rec)).select().single();
+    if(error) throw error;
+    rec.id=data.id; PROPOSTAS.push(rec);
+  }
+  return rec;
+}
+
+function initSupabase(){
+  const ok = SUPABASE_URL.startsWith("https://") && SUPABASE_ANON_KEY.length>40 && window.supabase;
+  if(!ok){
+    showBanner("<b>Modo local:</b> os dados ficam apenas neste navegador e somem ao recarregar. Para uso simultâneo entre analistas, configure a URL e a chave do Supabase no início do código (instruções no guia de hospedagem).");
+    setSync("", "Modo local (sem banco)");
+    return;
+  }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  NUVEM = true;
+  // Recarrega quando qualquer analista altera os dados (Realtime)
+  let t=null;
+  const reload=()=>{ clearTimeout(t); t=setTimeout(dbLoad, 400); };
+  sb.channel("sync-fii")
+    .on("postgres_changes",{event:"*",schema:"public",table:"imoveis"},reload)
+    .on("postgres_changes",{event:"*",schema:"public",table:"propostas"},reload)
+    .subscribe(st=>{ if(st==="SUBSCRIBED") setSync("on","Conectado · tempo real"); });
+  dbLoad();
+}
+
+/* ================= NAVEGAÇÃO ================= */
+$$(".nav-btn").forEach(b=>b.addEventListener("click",()=>{
+  $$(".nav-btn").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  $$(".view").forEach(v=>v.classList.remove("active"));
+  $("#view-"+b.dataset.view).classList.add("active");
+  if(b.dataset.view==="dash") renderDash();
+}));
+
+/* ================= ESTOQUE ================= */
+function renderEstoque(){
+  refreshEmpFilter();
+  const q = ($("#f-busca").value||"").toLowerCase();
+  const st = $("#f-status").value, emp = $("#f-emp").value;
+  const tb = $("#tb-imoveis tbody"); tb.innerHTML="";
+  IMOVEIS.filter(i=>
+    (!q || (i.nome+(i.ap||"")+(i.codigo||"")+(i.empreendimento||"")).toLowerCase().includes(q)) &&
+    (!st || i.status===st) && (!emp || i.empreendimento===emp)
+  ).forEach(i=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML = `<td class="mono">${i.codigo||"—"}</td><td><b>${i.nome}</b><br><span style="color:var(--ink-2);font-size:12px">${i.tipo||""} · ${i.areaPriv||"?"} m² · ${i.cidade||""}${i.uf?"/"+i.uf:""}</span></td>
+      <td class="mono">${i.ap||"—"}</td><td>${i.empreendimento||"—"}</td>
+      <td><span class="badge ${badgeCls(i.status)}">${i.status}</span></td>
+      <td class="mono r">${money(i.unCusto)}</td><td class="mono r">${money(i.propostaVenda)}</td>
+      <td class="mono r">${money(i.valorLiquidoFundo)}</td>
+      <td class="mono r">${money(excedenteQuota(i))}</td>
+      <td class="mono r">${money(excedenteRS(i))}</td>
+      <td class="mono r" style="color:${roiImovel(i)>=0?C.green:C.red}">${pct(roiImovel(i))}</td>
+      <td class="mono">${fmtD(i.desligamento)}</td>
+      <td><button class="link" data-edit="${i.id}">Editar</button></td>`;
+    tb.appendChild(tr);
+  });
+  if(!tb.children.length){
+    tb.innerHTML = IMOVEIS.length
+      ? '<tr><td colspan="13" style="color:var(--ink-2);padding:22px">Nenhum imóvel corresponde aos filtros aplicados.</td></tr>'
+      : '<tr><td colspan="13" style="color:var(--ink-2);padding:26px">Estoque vazio. Use <b>+ Cadastrar imóvel</b> para registrar a primeira unidade do portfólio.</td></tr>';
+  }
+  tb.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>openImovel(+b.dataset.edit)));
+}
+
+function refreshEmpFilter(){
+  const fe=$("#f-emp"), cur=fe.value;
+  fe.innerHTML='<option value="">Empreendimento: todos</option>';
+  empreendimentos().forEach(e=>fe.add(new Option(e,e)));
+  fe.value=cur;
+  const dl=$("#dl-emps"); dl.innerHTML="";
+  empreendimentos().forEach(e=>{const o=document.createElement("option");o.value=e;dl.appendChild(o);});
+  const dc=$("#dl-corr"); dc.innerHTML="";
+  corretores().forEach(c=>{const o=document.createElement("option");o.value=c;dc.appendChild(o);});
+}
+
+function fillStatic(){
+  const st=$("#f-status");
+  ["Disponível","Reservado","Em negociação","Vendido","Distratado","Bloqueado"].forEach(s=>st.add(new Option("Status: "+s,s)));
+  const sf=$("#sel-fundo"); FUNDOS.forEach(f=>sf.add(new Option(f.nome,f.id)));
+  const fd=$("#f-fundo-dash"); fd.add(new Option("Todos os fundos","")); FUNDOS.forEach(f=>fd.add(new Option(f.nome,f.id)));
+}
+["f-busca","f-status","f-emp"].forEach(id=>$("#"+id).addEventListener("input",renderEstoque));
+
+/* ----- Cadastro / edição ----- */
+let editId=null;
+$("#btn-novo").addEventListener("click",()=>openImovel(null));
+function openImovel(id){
+  editId=id; const f=$("#frm-imovel"); f.reset();
+  $("#dlg-title").textContent = id ? "Editar imóvel" : "Cadastrar imóvel";
+  if(id){
+    const i=imvById(id);
+    [...f.elements].forEach(el=>{ if(el.name && i[el.name]!=null) el.value=i[el.name]; });
+  } else {
+    const n = IMOVEIS.length ? Math.max(...IMOVEIS.map(i=>i.id||0))+1 : 1;
+    f.elements.codigo.value="IMV-"+String(n).padStart(3,"0");
+    f.elements.dataEstoque.value=dIso(hoje);
+  }
+  $("#dlg-imovel").showModal();
+}
+$("#dlg-imovel").addEventListener("close",async function(){
+  if(this.returnValue!=="save") return;
+  const f=$("#frm-imovel"), rec={};
+  [...f.elements].forEach(el=>{ if(el.name) rec[el.name]=el.type==="number"?(el.value===""?null:+el.value):el.value; });
+  rec.fundoId=+rec.fundoId;
+  if(editId) rec.id=editId;
+  try{
+    await dbSaveImovel(rec);
+    renderAll();
+  }catch(e){ console.error(e); setSync("err","Falha ao salvar — veja o console"); alert("Não foi possível salvar no banco. Verifique a conexão e as políticas do Supabase."); }
+});
+
+/* ================= PIPELINE ================= */
+$("#btn-nova-prop").addEventListener("click",()=>{
+  const sel=$("#sel-imovel-prop"); sel.innerHTML="";
+  const livres=IMOVEIS.filter(i=>!["Vendido","Distratado","Bloqueado"].includes(i.status));
+  if(!livres.length){ alert("Cadastre ao menos um imóvel disponível antes de registrar propostas."); return; }
+  livres.forEach(i=>sel.add(new Option((i.codigo||"")+" · "+i.nome,i.id)));
+  const f=$("#frm-prop"); f.reset(); f.elements.data.value=dIso(hoje);
+  $("#dlg-prop").showModal();
+});
+$("#dlg-prop").addEventListener("close",async function(){
+  if(this.returnValue!=="save") return;
+  const f=$("#frm-prop"), rec={};
+  [...f.elements].forEach(el=>{ if(el.name) rec[el.name]=el.type==="number"?+el.value||0:el.value; });
+  rec.imovelId=+rec.imovelId;
+  try{
+    await dbSaveProposta(rec);
+    const i=imvById(rec.imovelId);
+    if(i && i.status==="Disponível"){ i.status="Em negociação"; await dbSaveImovel(i); }
+    renderAll();
+  }catch(e){ console.error(e); setSync("err","Falha ao salvar — veja o console"); alert("Não foi possível salvar a proposta no banco."); }
+});
+
+async function avancar(p, btn){
+  if(btn) btn.disabled=true;
+  const idx=ETAPAS.indexOf(p.etapa);
+  if(idx<ETAPAS.length-1) p.etapa=ETAPAS[idx+1];
+  const i=imvById(p.imovelId);
+  try{
+    await dbSaveProposta(p);
+    if(i){
+      if(p.etapa==="Aprovada"||p.etapa==="Contrato assinado") i.status="Reservado";
+      if(p.etapa==="Vendida"){ i.status="Vendido"; i.dataVenda=dIso(hoje); i.lucroRealizado=(+p.valor||0)-(+i.unCusto||0)-(+i.custosAcum||0); }
+      await dbSaveImovel(i);
+    }
+    renderAll();
+  }catch(e){ console.error(e); setSync("err","Falha ao salvar — veja o console"); }
+}
+async function recusar(p){ p.etapa="Recusada"; try{ await dbSaveProposta(p); }catch(e){console.error(e);} renderPipeline(); }
+
+function renderPipeline(){
+  const kb=$("#kanban"); kb.innerHTML="";
+  const cols=["Disponível",...ETAPAS];
+  cols.forEach(col=>{
+    const div=document.createElement("div"); div.className="kcol";
+    let cards="";
+    if(col==="Disponível"){
+      const list=IMOVEIS.filter(i=>i.status==="Disponível");
+      cards=list.map(i=>`<div class="kcard" style="border-left-color:${C.grey}"><div class="t">${i.nome}</div><div class="m">${i.empreendimento||""}</div><div class="v">${money(i.propostaVenda)}</div></div>`).join("");
+      div.innerHTML=`<h4>Disponível <span class="cnt">${list.length}</span></h4>${cards||'<div style="color:var(--ink-2);font-size:12px">Nenhuma unidade livre.</div>'}`;
+    } else {
+      const list=PROPOSTAS.filter(p=>p.etapa===col);
+      cards=list.map(p=>{
+        const i=imvById(p.imovelId);
+        const acts = col==="Vendida" ? "" : `<div class="acts"><button class="btn sm primary" data-adv="${p.id}">Avançar →</button><button class="btn sm" data-rec="${p.id}">Recusar</button></div>`;
+        return `<div class="kcard"><div class="t">${i?i.nome:"—"}</div><div class="m">${p.cliente} · ${p.corretor}</div><div class="m">${fmtD(p.data)} · ${p.formaPgto}</div><div class="v">${money(p.valor)}</div>${acts}</div>`;
+      }).join("");
+      div.innerHTML=`<h4>${col} <span class="cnt">${list.length}</span></h4>${cards||'<div style="color:var(--ink-2);font-size:12px">Sem propostas nesta etapa.</div>'}`;
+    }
+    kb.appendChild(div);
+  });
+  kb.querySelectorAll("[data-adv]").forEach(b=>b.addEventListener("click",()=>avancar(PROPOSTAS.find(p=>p.id===+b.dataset.adv), b)));
+  kb.querySelectorAll("[data-rec]").forEach(b=>b.addEventListener("click",()=>recusar(PROPOSTAS.find(p=>p.id===+b.dataset.rec))));
+
+  const tb=$("#tb-prop tbody"); tb.innerHTML="";
+  [...PROPOSTAS].sort((a,b)=>String(b.data).localeCompare(String(a.data))).forEach(p=>{
+    const i=imvById(p.imovelId);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><b>${i?i.nome:"—"}</b></td><td>${p.cliente}</td><td>${p.corretor}</td><td class="mono">${fmtD(p.data)}</td>
+      <td class="mono r">${money(p.valor)}</td><td>${p.formaPgto}</td><td class="mono r">${money(p.entrada)}</td>
+      <td class="mono r">${p.parcelas||"—"}</td><td><span class="badge ${p.etapa==="Vendida"?"b-vend":p.etapa==="Recusada"?"b-dist":"b-neg"}">${p.etapa}</span></td>
+      <td>${["Vendida","Recusada"].includes(p.etapa)?"":'<button class="link" data-adv2="'+p.id+'">Avançar</button>'}</td>`;
+    tb.appendChild(tr);
+  });
+  if(!tb.children.length) tb.innerHTML='<tr><td colspan="10" style="color:var(--ink-2);padding:22px">Nenhuma proposta registrada. Use <b>+ Nova proposta</b> após cadastrar imóveis no estoque.</td></tr>';
+  tb.querySelectorAll("[data-adv2]").forEach(b=>b.addEventListener("click",()=>avancar(PROPOSTAS.find(p=>p.id===+b.dataset.adv2), b)));
+}
+
+/* ================= DASHBOARD ================= */
+const charts={};
+function mkChart(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart($("#"+id),cfg); }
+Chart.defaults.font.family="'IBM Plex Sans',sans-serif";
+Chart.defaults.color="#54625B";
+
+function kpiCard(lbl,val,delta){
+  return `<div class="card kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div>${delta?`<div class="delta">${delta}</div>`:""}</div>`;
+}
+
+function renderDash(){
+  $("#dash-date").textContent = "atualizado em "+hoje.toLocaleDateString("pt-BR");
+  const fId = $("#f-fundo-dash").value;
+  const IM = fId ? IMOVEIS.filter(i=>+i.fundoId===+fId) : IMOVEIS;
+  const ids = new Set(IM.map(i=>i.id));
+  const PR = PROPOSTAS.filter(p=>ids.has(p.imovelId));
+  const sum=(arr,f)=>arr.reduce((a,x)=>a+(+f(x)||0),0);
+
+  const cnt = s => IM.filter(i=>i.status===s).length;
+  const vendidos=cnt("Vendido"), total=IM.length;
+  $("#kpi-estoque").innerHTML =
+    kpiCard("Imóveis no portfólio", total) +
+    kpiCard("Disponíveis", cnt("Disponível")) +
+    kpiCard("Reservados", cnt("Reservado")) +
+    kpiCard("Em negociação", cnt("Em negociação")) +
+    kpiCard("Vendidos", vendidos) +
+    kpiCard("Taxa de venda", total? pct(vendidos/total) : "—", "vendidos / portfólio");
+
+  const estoqueAtivo = IM.filter(i=>i.status!=="Vendido" && i.status!=="Distratado");
+  const vendidosArr = IM.filter(i=>i.status==="Vendido");
+  $("#kpi-fin").innerHTML =
+    kpiCard("Valor total do estoque", money(sum(estoqueAtivo,i=>i.propostaVenda)), "preço de venda pedido") +
+    kpiCard("Valor contábil", money(sum(estoqueAtivo,i=>i.valorContabil))) +
+    kpiCard("Valor de mercado", money(sum(estoqueAtivo,i=>i.valorMercado))) +
+    kpiCard("Receita realizada", money(sum(vendidosArr,i=>i.valorLiquidoFundo)), "unidades vendidas") +
+    kpiCard("Receita projetada", money(sum(estoqueAtivo,i=>i.valorLiquidoFundo)), "estoque ativo") +
+    kpiCard("Lucro realizado", money(sum(vendidosArr,i=>i.lucroRealizado))) +
+    kpiCard("Lucro projetado", money(sum(estoqueAtivo,i=>(+i.valorLiquidoFundo||0)-(+i.unCusto||0)-(+i.custosAcum||0))));
+
+  const labels=[],real=[];
+  for(let m=11;m>=0;m--){
+    const d=new Date(hoje.getFullYear(),hoje.getMonth()-m,1);
+    labels.push(d.toLocaleDateString("pt-BR",{month:"short"}));
+    const key=d.toISOString().slice(0,7);
+    real.push(Math.round(sum(vendidosArr.filter(i=>String(i.dataVenda||"").startsWith(key)),i=>i.valorLiquidoFundo)/1000));
+  }
+  const positivos=real.filter(v=>v>0);
+  const media = positivos.length? positivos.reduce((a,b)=>a+b,0)/positivos.length : 0;
+  const proj = real.map((v,i)=>i>=9 && media? Math.round(media*1.08) : null);
+  mkChart("ch-receita",{type:"bar",data:{labels,datasets:[
+    {label:"Realizada",data:real,backgroundColor:C.green,borderRadius:4},
+    {label:"Projetada",data:proj,backgroundColor:C.gold,borderRadius:4}
+  ]},options:{maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},scales:{y:{grid:{color:"#EEECE4"}},x:{grid:{display:false}}}}});
+
+  const stLabels=["Disponível","Reservado","Em negociação","Vendido","Distratado","Bloqueado"];
+  mkChart("ch-status",{type:"doughnut",data:{labels:stLabels,datasets:[{data:stLabels.map(cnt),backgroundColor:[C.green,C.gold,C.blue,C.ink,C.red,C.grey],borderWidth:2,borderColor:"#fff"}]},
+    options:{maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:"bottom"}}}});
+
+  const funil=ETAPAS.map(e=>PR.filter(p=>p.etapa===e).length);
+  for(let i=funil.length-2;i>=0;i--) funil[i]+=funil[i+1];
+  mkChart("ch-funil",{type:"bar",data:{labels:["Recebida","Análise","Aprovada","Contrato","Vendida"],datasets:[{data:funil,backgroundColor:[C.grey,C.blue,C.gold,C.green2,C.green],borderRadius:4}]},
+    options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:"#EEECE4"},ticks:{precision:0}},y:{grid:{display:false}}}}});
+
+  const empAgg = empreendimentos().map(e=>({n:e, v:sum(vendidosArr.filter(i=>i.empreendimento===e),i=>i.valorLiquidoFundo)/1000})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v).slice(0,8);
+  mkChart("ch-emp",{type:"bar",data:{labels:empAgg.map(x=>x.n),datasets:[{data:empAgg.map(x=>Math.round(x.v)),backgroundColor:C.green,borderRadius:4}]},
+    options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:"#EEECE4"}},y:{grid:{display:false}}}}});
+
+  const corrAgg = corretores().map(c=>({c, n:PR.filter(p=>p.corretor===c&&p.etapa==="Vendida").length})).filter(x=>x.n>0).sort((a,b)=>b.n-a.n).slice(0,8);
+  mkChart("ch-corr",{type:"bar",data:{labels:corrAgg.map(x=>x.c),datasets:[{data:corrAgg.map(x=>x.n),backgroundColor:C.gold,borderRadius:4}]},
+    options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:"#EEECE4"},ticks:{precision:0}},y:{grid:{display:false}}}}});
+
+  const vendas=PR.filter(p=>p.etapa==="Vendida");
+  const conv = PR.length? vendas.length/PR.length : NaN;
+  const ticket = vendas.length? sum(vendas,p=>p.valor)/vendas.length : NaN;
+  const tmv = vendidosArr.length? vendidosArr.reduce((a,i)=>a+diasEstoque(i),0)/vendidosArr.length : NaN;
+  $("#kpi-com").innerHTML =
+    kpiCard("Conversão de propostas", pct(conv), PR.length? vendas.length+" de "+PR.length+" propostas":"") +
+    kpiCard("Ticket médio", isNaN(ticket)?"—":money(ticket)) +
+    kpiCard("Tempo médio de venda", isNaN(tmv)?"—":Math.round(tmv)+" dias", "entrada em estoque → venda") +
+    kpiCard("Propostas ativas", PR.filter(p=>!["Vendida","Recusada"].includes(p.etapa)).length);
+}
+$("#f-fundo-dash").addEventListener("change",renderDash);
+
+/* ================= BOOT ================= */
+function renderAll(){ renderEstoque(); renderPipeline(); renderDash(); }
+fillStatic(); renderAll(); initSupabase();
+
+</script>
+</body>
+</html>
