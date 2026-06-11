@@ -11,6 +11,6 @@
    Atenção: mantenha as aspas retas " " e cada valor em UMA linha só.
 ===================================================================== */
 window.PATRIMONIO_CONFIG = {
-  SUPABASE_URL:      "COLE_AQUI_A_URL",
-  SUPABASE_ANON_KEY: "COLE_AQUI_A_CHAVE_ANON"
+  SUPABASE_URL:      "https://bjfauahznyaysftladok.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_6lLShl7I7A-5v8hsTo9nCA_4mFX0sxI"
 };
